@@ -1,14 +1,24 @@
-import { useState } from 'react'
+import axios from 'axios'
+import { useState, useEffect } from 'react'
 
-const Person = ({person})=> {
+import personService from './services/persons'
+
+
+const Person = ({person, handleDelete})=> {
   return (<div>
     {`${person.name} ${person.number}`}
+    <button onClick={handleDelete}>delete</button>
   </div>)
 }
 
-const Persons = ({personsToShow}) => {
+const Persons = ({personsToShow ,handleDeleteID}) => {
+
+  
+
  return (<>
-   {personsToShow.map((person)=> <Person person={person} key={person.id}/>)}
+   {personsToShow.map((person)=> <Person person={person} key={person.id}
+     handleDelete={()=>handleDeleteID(person.id)}
+   />)}
  </>)
 }
 
@@ -33,15 +43,19 @@ const Filter = ({filterInput, handleFilterInput}) => {
 }
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040-123456', id: 1 },
-    { name: 'Ada Lovelace', number: '39-44-5323523', id: 2 },
-    { name: 'Dan Abramov', number: '12-43-234345', id: 3 },
-    { name: 'Mary Poppendieck', number: '39-23-6423122', id: 4 }
-  ]) 
+  const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filterInput, setFilterInput] = useState('')
+
+  useEffect(()=>{
+    personService
+        .getAll()
+        .then((personsData=>{
+          setPersons(personsData)
+        }))
+  }, [])
+  console.log('render', persons.length, 'persons');
 
   let personsToShow= filterInput? persons.filter((person)=>{
     return person.name.toLowerCase().includes(filterInput.toLowerCase())
@@ -54,7 +68,11 @@ const App = () => {
     let addPerson = persons.findIndex((person)=> person.name===newName)<0?true:false;
     if(addPerson){
       let newPerson = {name: newName, number: newNumber, id: persons.length + 1}
-      setPersons(persons.concat(newPerson))
+      personService
+          .create(newPerson)
+          .then((newPersonS)=> {
+            setPersons(persons.concat(newPersonS))
+          })
     }else{
       window.alert(`${newName} is already added to phoneook`)
     }
@@ -75,6 +93,19 @@ const App = () => {
     setFilterInput(event.target.value)
   }
 
+  const handleDeleteID = (id)=>{
+    const person = persons.find((p)=>p.id===id)
+    const msg = `Delete ${person.name} ?`
+    if (window.confirm(msg)){
+      personService
+                .deleteID(id)
+                .then((r)=>{
+                  console.log(r.status);
+                  setPersons(persons.filter((p)=> p.id!==id))
+                })
+    }
+  }
+
   return (
     <div>
       <h2>Phonebook</h2>
@@ -87,7 +118,7 @@ const App = () => {
       
       <h2>Numbers</h2>
       
-      <Persons personsToShow={personsToShow}/>  
+      <Persons personsToShow={personsToShow} handleDeleteID={handleDeleteID}/>  
       
     </div>
   )
