@@ -20,4 +20,10 @@ const deleteID =(id)=>{
     return axios
                 .delete(`${base_uri}/${id}`)
 }
-export default {getAll, create, deleteID}
+
+const update =(person)=>{
+    return axios
+                .put(`${base_uri}/${person.id}`, person)
+                .then(response=> response.data)
+}
+export default {getAll, create, deleteID, update}

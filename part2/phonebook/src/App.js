@@ -42,11 +42,24 @@ const Filter = ({filterInput, handleFilterInput}) => {
   )
 }
 
+const Notification = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+
+  return (
+    <div className='error'>
+      {message}
+    </div>
+  )
+}
+
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filterInput, setFilterInput] = useState('')
+  const [errorMessage, setErrorMessage] = useState(null)
 
   useEffect(()=>{
     personService
@@ -67,14 +80,34 @@ const App = () => {
     
     let addPerson = persons.findIndex((person)=> person.name===newName)<0?true:false;
     if(addPerson){
-      let newPerson = {name: newName, number: newNumber, id: persons.length + 1}
+      let newPerson = {name: newName, number: newNumber}
       personService
           .create(newPerson)
           .then((newPersonS)=> {
             setPersons(persons.concat(newPersonS))
+            setErrorMessage(`Added ${newPersonS.name}`)
+            setTimeout(()=> setErrorMessage(null), 2000)
           })
     }else{
-      window.alert(`${newName} is already added to phoneook`)
+      if(window.confirm(`${newName} is already added to phoneook, replace the old number with a new one?`)){
+        let person = persons.find((person)=> person.name===newName)
+        let updatedPerson = {...person, number:newNumber}
+        personService
+              .update(updatedPerson)
+              .then((updatedPerson)=>{
+                let removePerson = persons.filter((p)=>p.id !==updatedPerson.id)
+                setPersons(removePerson.concat(updatedPerson))
+                setErrorMessage(`Changed ${updatedPerson.name}'s number!`)
+                setTimeout(()=> setErrorMessage(null), 2000)
+              })
+              .catch(error=> {
+                console.log('error in update', error);
+                let removePerson = persons.filter((p)=>p.id !==updatedPerson.id)
+                setPersons(removePerson)
+                setErrorMessage(`${person.name} is already deleted from phonebook!`)
+                setTimeout(()=> setErrorMessage(null), 2000)
+              })
+      }
     }
     setNewName('')
     setNewNumber('')
@@ -109,6 +142,8 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+
+      <Notification message={errorMessage}/>
 
       <Filter filterInput={filterInput} handleFilterInput={handleFilterInput}/>
 
